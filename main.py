@@ -1,11 +1,10 @@
-from src.modules.product import Product  
-from src.modules.physicalProduct import PhysicalProduct
-from src.modules.digitalProduct import DigitalProduct                                                                                                                                                                                                                                                         
+from src.modules.product import Product
+from src.product.productFactory import ProductFactory
 from src.modules.inventory import Inventory 
 from src.modules.fileHandler import FileHandler
 from src.modules.supplier import Supplier
 from src.modules.order import Order
-from src.utils.check_user_input import check_user_input
+from src.utils.check_user_input import check_user_input, get_positive_price
 
 inventory = Inventory()
 fileHandler = FileHandler()
@@ -54,32 +53,34 @@ while True:
             continue   
         product_id = input("Product ID: ").strip().upper()
         product_name = input("Product Name: ").strip()
-        price = float(input("Price: "))
+        price = get_positive_price("Price: ")
         stock = int(input("Stock Quantity: "))
         supplier_id = input("Supplier ID: ").strip()
         supplier_name = input("Supplier Name: ").strip()
         supplier_email = input("Supplier Email: ").strip()
         supplier = Supplier(supplier_id, supplier_name, supplier_email)
 
-        if product_type == "1": 
+        if product_type == "1":
             weight = float(input("Weight: "))
-            new_product = PhysicalProduct(
+            new_product = ProductFactory.create(
+                "physical",
                 product_id,
                 product_name,
                 price,
                 stock,
-                weight,
-                supplier
+                supplier,
+                weight=weight,
             )
-        else: 
+        else:
             download_size = float(input("Download Size: "))
-            new_product = DigitalProduct(
+            new_product = ProductFactory.create(
+                "digital",
                 product_id,
                 product_name,
                 price,
                 stock,
-                download_size,
-                supplier
+                supplier,
+                download_size=download_size,
             )
         inventory.add_product(new_product)
 

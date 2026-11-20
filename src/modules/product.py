@@ -22,6 +22,10 @@ from .supplier import Supplier
 #created
 class Product(ABC):
     def __init__(self, product_id: str, name: str , price: float, stock: int, supplier: Supplier ):
+        if price <= 0:
+            raise ValueError("Product price must be greater than zero.")
+        if stock < 0:
+            raise ValueError("Product stock quantity cannot be negative.")
         self.__product_id = product_id
         self.__name = name
         self.__price = price
@@ -54,8 +58,8 @@ class Product(ABC):
 
     #methods go here
     def update_stock(self, quantity: int) -> None:
-        if self.__stock < 0:
-            print("Product Quantity cannot be 0 or negative number.")
+        if quantity < 0:
+            raise ValueError("Product stock quantity cannot be negative.")
         self.__stock = quantity
 
 
