@@ -1,9 +1,13 @@
 from src.modules.product import Product
 from src.product.productFactory import ProductFactory
-from src.modules.inventory import Inventory 
-from src.modules.fileHandler import FileHandler
+from src.modules.inventory import Inventory
+from src.modules.fileHandler import FileHandler, load_products
 from src.modules.supplier import Supplier
 from src.modules.order import Order
+from src.payment.bulkDiscount import BulkDiscount
+from src.payment.noDiscount import NoDiscount
+from src.payment.percentageDiscount import PercentageDiscount
+from src.payment.studentDiscount import StudentDiscount
 from src.utils.check_user_input import check_user_input, get_positive_price
 
 inventory = Inventory()
@@ -25,7 +29,8 @@ while True:
         "4. Search Product\n"
         "5. Create Order\n"
         "6. Save Inventory\n"
-        "7. Exit\n"
+        "7. Load Products from CSV\n"
+        "8. Exit\n"
         "----------------------------\n"
     )
 
@@ -54,35 +59,38 @@ while True:
         product_id = input("Product ID: ").strip().upper()
         product_name = input("Product Name: ").strip()
         price = get_positive_price("Price: ")
-        stock = int(input("Stock Quantity: "))
-        supplier_id = input("Supplier ID: ").strip()
-        supplier_name = input("Supplier Name: ").strip()
-        supplier_email = input("Supplier Email: ").strip()
-        supplier = Supplier(supplier_id, supplier_name, supplier_email)
+        try:
+            stock = int(input("Stock Quantity: "))
+            supplier_id = input("Supplier ID: ").strip()
+            supplier_name = input("Supplier Name: ").strip()
+            supplier_email = input("Supplier Email: ").strip()
+            supplier = Supplier(supplier_id, supplier_name, supplier_email)
 
-        if product_type == "1":
-            weight = float(input("Weight: "))
-            new_product = ProductFactory.create(
-                "physical",
-                product_id,
-                product_name,
-                price,
-                stock,
-                supplier,
-                weight=weight,
-            )
-        else:
-            download_size = float(input("Download Size: "))
-            new_product = ProductFactory.create(
-                "digital",
-                product_id,
-                product_name,
-                price,
-                stock,
-                supplier,
-                download_size=download_size,
-            )
-        inventory.add_product(new_product)
+            if product_type == "1":
+                weight = float(input("Weight: "))
+                new_product = ProductFactory.create(
+                    "physical",
+                    product_id,
+                    product_name,
+                    price,
+                    stock,
+                    supplier,
+                    weight=weight,
+                )
+            else:
+                download_size = float(input("Download Size: "))
+                new_product = ProductFactory.create(
+                    "digital",
+                    product_id,
+                    product_name,
+                    price,
+                    stock,
+                    supplier,
+                    download_size=download_size,
+                )
+            inventory.add_product(new_product)
+        except ValueError as err:
+            print(f"Error adding product: {err}")
 
     elif check_user_input(user_option) == "3":
         print("Update Stock")
@@ -90,8 +98,11 @@ while True:
 
         product_item = inventory.search_product(product_id)
         if product_item:
-            product_stock = int(input("New Stock Quantity: "))
-            product_item.update_stock(product_stock)
+            try:
+                product_stock = int(input("New Stock Quantity: "))
+                product_item.update_stock(product_stock)
+            except ValueError as err:
+                print(f"Error updating stock: {err}")
         else:
             print("Product not found.")
 
@@ -117,10 +128,36 @@ while True:
             if not found_prod:
                 print("Product not found.")
                 continue
-            qty = int(input("Quantity: "))
-            order.add_order_line(found_prod, qty)
+            try:
+                qty = int(input("Quantity: "))
+                order.add_order_line(found_prod, qty)
+            except ValueError as err:
+                print(f"Error adding order line: {err}")
 
         if order.order_lines:
+            print("\nSelect Discount:")
+            print("1. No Discount")
+            print("2. Percentage Discount")
+            print("3. Bulk Discount")
+            print("4. Student Discount (20%)")
+            discount_choice = input("Enter choice (1-4): ").strip()
+
+            try:
+                if discount_choice == "2":
+                    percent = float(input("Discount Percentage: "))
+                    order.set_discount(PercentageDiscount(percent))
+                elif discount_choice == "3":
+                    threshold = float(input("Minimum Total Threshold: "))
+                    amount = float(input("Discount Amount: "))
+                    order.set_discount(BulkDiscount(threshold, amount))
+                elif discount_choice == "4":
+                    order.set_discount(StudentDiscount())
+                else:
+                    order.set_discount(NoDiscount())
+            except ValueError as err:
+                print(f"Invalid discount input ({err}). Using No Discount.")
+                order.set_discount(NoDiscount())
+
             print(f"\nOrder {order.order_id} Summary:")
             for line in order.order_lines:
                 print(f"{line.product.name} x {line.quantity} | Subtotal: ${line.calculate_subtotal():.2f}")
@@ -132,8 +169,14 @@ while True:
         print("Saving inventory......")
         print("Inventory saved successfully to inventory.json.")
         fileHandler.save_data(inventory.products)
-    
+
     elif check_user_input(user_option) == "7":
+        print("Load Products from CSV")
+        csv_path = input("CSV Path (default 'src/model/products.csv'): ").strip() or "src/model/products.csv"
+        supplier = Supplier("S001", "Default Supplier", "supplier@example.com")
+        load_products(csv_path, inventory, supplier)
+
+    elif check_user_input(user_option) == "8":
         fileHandler.save_data(inventory.products)
         print("Saving inventory before exit...")
         print("Inventory saved successfully.\n")
