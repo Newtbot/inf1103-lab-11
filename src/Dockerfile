@@ -1,4 +1,5 @@
-    FROM python:3.11-slim                                                                                                                                                                                                                                                                                
-    WORKDIR /app                                                                                                                                                                                                                                                                                         
-    COPY . /app                                                                                                                                                                                                                                                                                          
-    CMD ["python", "main.py"] 
+FROM python:3.11-slim
+WORKDIR /app
+COPY . /app
+RUN python -m unittest discover -s test
+CMD ["python", "main.py"]
